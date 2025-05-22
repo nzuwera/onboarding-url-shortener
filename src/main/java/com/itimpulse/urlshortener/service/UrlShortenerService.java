@@ -1,13 +1,11 @@
 package com.itimpulse.urlshortener.service;
 
+import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
+import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
 import com.itimpulse.urlshortener.model.ShortenUrl;
 
 public interface UrlShortenerService {
-    public ShortenUrl createShortUrl(String longUrl, String customId, Long ttlHours);
-
-    public String getLongUrl(String shortId);
-
-    public void deleteUrl(String shortId);
-
-    public String generateShortId();
+    ShortenUrlResponseDto createShortUrl(ShortenUrlRequestDto longUrl, Integer ttl);
+    ShortenUrl getShortUrl(String shortId);
+    void deleteShortUrl(String shortId);
 }
