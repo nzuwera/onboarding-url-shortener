@@ -7,6 +7,7 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 public class ShortenUrlIdValidator implements ConstraintValidator<ValidShortenUrlId, String> {
 
@@ -29,20 +30,25 @@ public class ShortenUrlIdValidator implements ConstraintValidator<ValidShortenUr
 
     @Override
     public void initialize(ValidShortenUrlId constraintAnnotation) {
+
+        Pattern containsLetter = Pattern.compile(".*[a-zA-Z].*");
+        Pattern containsDigit = Pattern.compile(".*\\d.*");
+        Pattern noWhitespace = Pattern.compile("^\\S*$");
+
         rules.add(new ValidationRule(
                 customId -> customId == null || customId.isEmpty() || customId.length() >= 6,
                 "customId must be at least 6 characters long."
         ));
         rules.add(new ValidationRule(
-                customId -> customId == null || customId.isEmpty() || customId.matches(".*[a-zA-Z].*"),
+                customId -> customId == null || customId.isEmpty() || containsLetter.matcher(customId).matches(),
                 "customId must contain letters."
         ));
         rules.add(new ValidationRule(
-                customId -> customId == null || customId.isEmpty() || customId.matches(".*\\d.*"),
+                customId -> customId == null || customId.isEmpty() || containsDigit.matcher(customId).matches(),
                 "customId must contain at least one digit."
         ));
         rules.add(new ValidationRule(
-                customId -> customId == null || customId.isEmpty() || !customId.matches(".*\\s.*"),
+                customId -> customId == null || customId.isEmpty() || noWhitespace.matcher(customId).matches(),
                 "customId cannot contain whitespace."
         ));
     }
