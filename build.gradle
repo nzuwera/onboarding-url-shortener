@@ -24,6 +24,21 @@ repositories {
     mavenCentral()
 }
 
+bootRun {
+    environment dotenv()
+}
+
+def dotenv() {
+    def envFile = file(".env")
+    if (!envFile.exists()) return [:]
+
+    def props = new Properties()
+    envFile.withInputStream {
+        props.load(new ByteArrayInputStream(it.bytes))
+    }
+    return props
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.4.4'
