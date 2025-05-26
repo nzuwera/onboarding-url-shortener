@@ -11,7 +11,8 @@ A spring-boot service for shortening URLs
 > - Gradle
 
 ### Steps
-> - Clone this repository and replace database environment variables in application.properties
+> - Clone this repository
+> - Create the `.env` file in your project root based on the `.env.example` provided. Or replace database environment variables directly in application.properties 
 > - Run the Command `gradle bootRun` to start the server
 > - It should be accessible on `http://localhost:{SERVER_PORT}`
 
