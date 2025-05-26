@@ -192,6 +192,4 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
             log.info("Deleted expired URL with ID: {}", url.getId());
         }
     }
-
-
 }
