@@ -23,7 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class UrlShortenerServiceImplTest {
+class UrlShortenerServiceTest {
 
     @Mock
     private ShortenUrlRepository shortenUrlRepository;
@@ -35,7 +35,7 @@ class UrlShortenerServiceImplTest {
     private UrlBuilder urlBuilder;
 
     @InjectMocks
-    private UrlShortenerServiceImpl urlShortenerService;
+    private UrlShortenerService urlShortenerService;
 
     @Test
     void testCreateShortUrlWithGeneratedIdSuccess() {

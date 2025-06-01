@@ -1,6 +1,5 @@
 package com.itimpulse.urlshortener.dto;
 
-import com.itimpulse.urlshortener.validations.ValidShortenUrlId;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
@@ -15,6 +14,5 @@ public class ShortenUrlRequestDto {
     private String longUrl;
 
     @Schema(description = "Optional custom ID for the shortened URL. Must be at least 6 characters, contain letters and digits.", example = "abc123")
-    @ValidShortenUrlId
     private String customId;
 }

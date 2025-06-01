@@ -146,6 +146,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.GONE);
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<CustomResponse<String>> handleBadRequestException(UrlExpiredException ex) {
+        CustomResponse<String> response = CustomResponse.errorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
     /**
      * Handles all unexpected exceptions that aren't specifically caught.
      * 
