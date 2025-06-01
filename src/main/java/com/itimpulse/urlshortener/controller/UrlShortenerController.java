@@ -2,13 +2,17 @@ package com.itimpulse.urlshortener.controller;
 
 import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
+import com.itimpulse.urlshortener.exceptions.ConflictException;
+import com.itimpulse.urlshortener.exceptions.NotFoundException;
+import com.itimpulse.urlshortener.exceptions.UrlExpiredException;
 import com.itimpulse.urlshortener.model.ShortenUrl;
-import com.itimpulse.urlshortener.service.UrlShortenerService;
+import com.itimpulse.urlshortener.service.IUrlShortenerService;
 import com.itimpulse.urlshortener.util.CustomResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,15 +44,15 @@ import java.net.URI;
 @Tag(name = "URL Shortener API", description = "Operations related to URL shortening")
 public class UrlShortenerController {
 
-    private final UrlShortenerService urlshortenerService;
+    private final IUrlShortenerService urlShortenerService;
 
     /**
      * Constructor for dependency injection.
      * 
      * @param urlshortenerService Service layer implementation for URL shortening operations
      */
-    public UrlShortenerController(UrlShortenerService urlshortenerService) {
-        this.urlshortenerService = urlshortenerService;
+    public UrlShortenerController(IUrlShortenerService urlshortenerService) {
+        this.urlShortenerService = urlshortenerService;
     }
 
     /**
@@ -95,7 +99,7 @@ public class UrlShortenerController {
             @RequestBody @Valid ShortenUrlRequestDto longUrl) {
 
         // Delegate URL shortening to the service layer
-        ShortenUrlResponseDto shortUrl = urlshortenerService.createShortUrl(longUrl, ttl);
+        ShortenUrlResponseDto shortUrl = urlShortenerService.createShortUrl(longUrl, ttl);
 
         // Return success response with HTTP 201 Created status
         return ResponseEntity.status(HttpStatus.CREATED.value()).body(
@@ -130,7 +134,7 @@ public class UrlShortenerController {
     @GetMapping("/{id}")
     public ResponseEntity<Object> redirectToOriginal(@Parameter(description = "Shortened URL identifier") @PathVariable String id) {
         // Retrieve the URL entity (includes expiration check)
-        ShortenUrl url = urlshortenerService.getShortUrl(id);
+        ShortenUrl url = urlShortenerService.getShortUrl(id);
 
         // Log the redirect for monitoring and analytics purposes
         log.info("Redirecting to: {}", url.getUrl());
@@ -160,7 +164,7 @@ public class UrlShortenerController {
     @DeleteMapping("/api/v1/shorten-url/{id}")
     public ResponseEntity<CustomResponse<Void>> deleteShortUrl(@Parameter(description = "Shortened URL identifier to delete") @PathVariable String id) {
         // Delegate deletion to the service layer
-        urlshortenerService.deleteShortUrl(id);
+        urlShortenerService.deleteShortUrl(id);
         
         // Return success response with HTTP 200 OK status
         return ResponseEntity.ok(CustomResponse.successResponse(
