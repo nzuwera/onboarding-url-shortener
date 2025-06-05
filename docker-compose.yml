@@ -1,0 +1,29 @@
+services:
+  spring-app:
+    image: url-shortener-app
+    build: .
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      POSTGRES_DB_URL: jdbc:postgresql://db:5432/shortenUrl
+      POSTGRES_DB_USERNAME: postgres
+      POSTGRES_DB_PASSWORD: shorten25
+      ALLOWED_ORIGIN: http://localhost:8081
+
+  db:
+    image: postgres:latest
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: shorten25
+      POSTGRES_DB: shortenUrl
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
