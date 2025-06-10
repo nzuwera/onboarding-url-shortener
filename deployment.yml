@@ -25,16 +25,16 @@ spec:
             - containerPort: 8081
           env:
             - name: SERVER_PORT
-              value:
+              value: "8081"
 
             - name: POSTGRES_DB_URL
-              value:
+              value: "jdbc:postgresql://172.16.16.141:5432/url-shortener"
 
             - name: POSTGRES_DB_USERNAME
-              value:
+              value: "postgres"
 
             - name: POSTGRES_DB_PASSWORD
-              value:
+              value: "babu"
 ---
 apiVersion: v1
 kind: Service
