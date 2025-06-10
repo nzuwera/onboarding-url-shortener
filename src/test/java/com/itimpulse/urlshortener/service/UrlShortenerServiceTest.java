@@ -1,5 +1,9 @@
 package com.itimpulse.urlshortener.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
 import com.itimpulse.urlshortener.exceptions.BadRequestException;
@@ -10,194 +14,177 @@ import com.itimpulse.urlshortener.model.ShortenUrl;
 import com.itimpulse.urlshortener.repository.ShortenUrlRepository;
 import com.itimpulse.urlshortener.util.ShortIdGenerator;
 import com.itimpulse.urlshortener.util.UrlBuilder;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class UrlShortenerServiceTest {
 
-    @Mock
-    private ShortenUrlRepository shortenUrlRepository;
+  @Mock private ShortenUrlRepository shortenUrlRepository;
 
-    @Mock
-    private ShortIdGenerator shortIdGenerator;
+  @Mock private ShortIdGenerator shortIdGenerator;
 
-    @Mock
-    private UrlBuilder urlBuilder;
+  @Mock private UrlBuilder urlBuilder;
 
-    @InjectMocks
-    private UrlShortenerService urlShortenerService;
+  @InjectMocks private UrlShortenerService urlShortenerService;
 
-    @Test
-    void testCreateShortUrlWithGeneratedIdSuccess() {
-        ShortenUrlRequestDto request = new ShortenUrlRequestDto();
-        request.setLongUrl("https://example.com");
+  @Test
+  void testCreateShortUrlWithGeneratedIdSuccess() {
+    ShortenUrlRequestDto request = new ShortenUrlRequestDto();
+    request.setLongUrl("https://example.com");
 
-        when(shortIdGenerator.generate()).thenReturn("abc123");
-        when(shortenUrlRepository.existsById("abc123")).thenReturn(false);
-        when(urlBuilder.buildShortUrl("abc123")).thenReturn("http://short.ly/abc123");
+    when(shortIdGenerator.generate()).thenReturn("abc123");
+    when(shortenUrlRepository.existsById("abc123")).thenReturn(false);
+    when(urlBuilder.buildShortUrl("abc123")).thenReturn("http://short.ly/abc123");
 
-        ShortenUrlResponseDto result = urlShortenerService.createShortUrl(request, 1);
+    ShortenUrlResponseDto result = urlShortenerService.createShortUrl(request, 1);
 
-        assertEquals("abc123", result.getId());
-        assertEquals("https://example.com", result.getUrl());
-        assertEquals("http://short.ly/abc123", result.getShortenUrl());
+    assertEquals("abc123", result.getId());
+    assertEquals("https://example.com", result.getUrl());
+    assertEquals("http://short.ly/abc123", result.getShortenUrl());
 
-        verify(shortenUrlRepository).save(any(ShortenUrl.class));
+    verify(shortenUrlRepository).save(any(ShortenUrl.class));
+  }
 
-    }
+  @Test
+  void testCreateShortUrlWithCustomIdSuccess() {
 
-    @Test
-    void testCreateShortUrlWithCustomIdSuccess() {
+    ShortenUrlRequestDto request = new ShortenUrlRequestDto();
+    request.setLongUrl("https://example.com");
+    request.setCustomId("myCustomId");
 
-        ShortenUrlRequestDto request = new ShortenUrlRequestDto();
-        request.setLongUrl("https://example.com");
-        request.setCustomId("myCustomId");
+    when(shortenUrlRepository.existsById("myCustomId")).thenReturn(false);
+    when(urlBuilder.buildShortUrl("myCustomId")).thenReturn("http://short.ly/myCustomId");
 
-        when(shortenUrlRepository.existsById("myCustomId")).thenReturn(false);
-        when(urlBuilder.buildShortUrl("myCustomId")).thenReturn("http://short.ly/myCustomId");
+    ShortenUrlResponseDto result = urlShortenerService.createShortUrl(request, 2);
 
-        ShortenUrlResponseDto result = urlShortenerService.createShortUrl(request, 2);
+    assertEquals("myCustomId", result.getId());
+    assertEquals("https://example.com", result.getUrl());
+    assertEquals("http://short.ly/myCustomId", result.getShortenUrl());
 
-        assertEquals("myCustomId", result.getId());
-        assertEquals("https://example.com", result.getUrl());
-        assertEquals("http://short.ly/myCustomId", result.getShortenUrl());
+    verify(shortIdGenerator, never()).generate();
+    verify(shortenUrlRepository).save(any(ShortenUrl.class));
+  }
 
-        verify(shortIdGenerator, never()).generate();
-        verify(shortenUrlRepository).save(any(ShortenUrl.class));
-    }
+  @Test
+  void testCreateShortUrlWithInvalidCustomId() {
+    ShortenUrlRequestDto request = new ShortenUrlRequestDto();
+    request.setLongUrl("https://example.com");
+    request.setCustomId("!@#");
 
-    @Test
-    void testCreateShortUrlWithInvalidCustomId() {
-        ShortenUrlRequestDto request = new ShortenUrlRequestDto();
-        request.setLongUrl("https://example.com");
-        request.setCustomId("!@#");
+    when(shortenUrlRepository.existsById("!@#")).thenReturn(false);
 
-        when(shortenUrlRepository.existsById("!@#")).thenReturn(false);
+    BadRequestException exception =
+        assertThrows(
+            BadRequestException.class, () -> urlShortenerService.createShortUrl(request, 1));
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> urlShortenerService.createShortUrl(request, 1)
-        );
+    assertEquals("Invalid custom id", exception.getMessage());
+    verify(shortenUrlRepository, never()).save(any());
+  }
 
-        assertEquals("Invalid custom id", exception.getMessage());
-        verify(shortenUrlRepository, never()).save(any());
-    }
+  @Test
+  void testCreateShortUrlWithExistingCustomId() {
 
+    ShortenUrlRequestDto request = new ShortenUrlRequestDto();
+    request.setLongUrl("https://example.com");
+    request.setCustomId("existingId");
 
-    @Test
-    void testCreateShortUrlWithExistingCustomId() {
+    when(shortenUrlRepository.existsById("existingId")).thenReturn(true);
 
-        ShortenUrlRequestDto request = new ShortenUrlRequestDto();
-        request.setLongUrl("https://example.com");
-        request.setCustomId("existingId");
+    ConflictException exception =
+        assertThrows(ConflictException.class, () -> urlShortenerService.createShortUrl(request, 1));
 
-        when(shortenUrlRepository.existsById("existingId")).thenReturn(true);
+    assertEquals(
+        "The provided ID already exists. Please choose a different ID.", exception.getMessage());
 
-        ConflictException exception = assertThrows(
-                ConflictException.class,
-                () -> urlShortenerService.createShortUrl(request, 1)
-        );
+    verify(shortIdGenerator, never()).generate();
+    verify(shortenUrlRepository, never()).save(any());
+  }
 
-        assertEquals("The provided ID already exists. Please choose a different ID.", exception.getMessage());
+  @Test
+  void testGetShortUrlExpiry() {
+    ShortenUrl url = new ShortenUrl();
+    url.setId("expired123");
+    url.setTtl(LocalDateTime.now().minusHours(1));
 
-        verify(shortIdGenerator, never()).generate();
-        verify(shortenUrlRepository, never()).save(any());
-    }
+    when(shortenUrlRepository.findById("expired123")).thenReturn(Optional.of(url));
 
-    @Test
-    void testGetShortUrlExpiry() {
-        ShortenUrl url = new ShortenUrl();
-        url.setId("expired123");
-        url.setTtl(LocalDateTime.now().minusHours(1));
-
-        when(shortenUrlRepository.findById("expired123"))
-                .thenReturn(Optional.of(url));
-
-        assertThrows(UrlExpiredException.class, () -> {
-            urlShortenerService.getShortUrl("expired123");
+    assertThrows(
+        UrlExpiredException.class,
+        () -> {
+          urlShortenerService.getShortUrl("expired123");
         });
-    }
+  }
 
-    @Test
-    void testGetShortUrlSuccess() {
-        ShortenUrl url = new ShortenUrl();
-        url.setId("abc123");
-        url.setUrl("https://example.com");
-        url.setTtl(LocalDateTime.now().plusHours(1)); // Not expired
+  @Test
+  void testGetShortUrlSuccess() {
+    ShortenUrl url = new ShortenUrl();
+    url.setId("abc123");
+    url.setUrl("https://example.com");
+    url.setTtl(LocalDateTime.now().plusHours(1)); // Not expired
 
-        when(shortenUrlRepository.findById("abc123"))
-                .thenReturn(Optional.of(url));
+    when(shortenUrlRepository.findById("abc123")).thenReturn(Optional.of(url));
 
-        ShortenUrl result = urlShortenerService.getShortUrl("abc123");
+    ShortenUrl result = urlShortenerService.getShortUrl("abc123");
 
-        assertEquals("https://example.com", result.getUrl());
-    }
+    assertEquals("https://example.com", result.getUrl());
+  }
 
-    @Test
-    void testGetShortUrlNotFound() {
-        when(shortenUrlRepository.findById("unknown"))
-                .thenReturn(Optional.empty());
+  @Test
+  void testGetShortUrlNotFound() {
+    when(shortenUrlRepository.findById("unknown")).thenReturn(Optional.empty());
 
-        NotFoundException exception = assertThrows(
-                NotFoundException.class,
-                () -> urlShortenerService.getShortUrl("unknown")
-        );
+    NotFoundException exception =
+        assertThrows(NotFoundException.class, () -> urlShortenerService.getShortUrl("unknown"));
 
-        assertEquals("The provided ID could not be found.", exception.getMessage());
-    }
+    assertEquals("The provided ID could not be found.", exception.getMessage());
+  }
 
-    @Test
-    void testDeleteShortUrlSuccess() {
-        ShortenUrl url = new ShortenUrl();
-        url.setId("abc123");
+  @Test
+  void testDeleteShortUrlSuccess() {
+    ShortenUrl url = new ShortenUrl();
+    url.setId("abc123");
 
-        when(shortenUrlRepository.findById("abc123")).thenReturn(Optional.of(url));
+    when(shortenUrlRepository.findById("abc123")).thenReturn(Optional.of(url));
 
-        urlShortenerService.deleteShortUrl("abc123");
+    urlShortenerService.deleteShortUrl("abc123");
 
-        verify(shortenUrlRepository).deleteById("abc123");
-    }
+    verify(shortenUrlRepository).deleteById("abc123");
+  }
 
-    @Test
-    void testDeleteShortUrlNotFound() {
-        when(shortenUrlRepository.findById("notFoundId")).thenReturn(Optional.empty());
+  @Test
+  void testDeleteShortUrlNotFound() {
+    when(shortenUrlRepository.findById("notFoundId")).thenReturn(Optional.empty());
 
-        NotFoundException exception = assertThrows(
-                NotFoundException.class,
-                () -> urlShortenerService.deleteShortUrl("notFoundId")
-        );
+    NotFoundException exception =
+        assertThrows(
+            NotFoundException.class, () -> urlShortenerService.deleteShortUrl("notFoundId"));
 
-        assertEquals("The provided ID could not be found.", exception.getMessage());
-    }
+    assertEquals("The provided ID could not be found.", exception.getMessage());
+  }
 
-    @Test
-    void testDeleteShortUrl() {
-        ShortenUrl expired1 = new ShortenUrl();
-        expired1.setId("id1");
-        expired1.setTtl(LocalDateTime.now().minusHours(2));
+  @Test
+  void testDeleteShortUrl() {
+    ShortenUrl expired1 = new ShortenUrl();
+    expired1.setId("id1");
+    expired1.setTtl(LocalDateTime.now().minusHours(2));
 
-        ShortenUrl expired2 = new ShortenUrl();
-        expired2.setId("id2");
-        expired2.setTtl(LocalDateTime.now().minusMinutes(30));
+    ShortenUrl expired2 = new ShortenUrl();
+    expired2.setId("id2");
+    expired2.setTtl(LocalDateTime.now().minusMinutes(30));
 
-        when(shortenUrlRepository.findByTtlBefore(any(LocalDateTime.class)))
-                .thenReturn(List.of(expired1, expired2));
+    when(shortenUrlRepository.findByTtlBefore(any(LocalDateTime.class)))
+        .thenReturn(List.of(expired1, expired2));
 
-        urlShortenerService.deleteExpiredShortUrls();
+    urlShortenerService.deleteExpiredShortUrls();
 
-        verify(shortenUrlRepository).delete(expired1);
-        verify(shortenUrlRepository).delete(expired2);
-    }
+    verify(shortenUrlRepository).delete(expired1);
+    verify(shortenUrlRepository).delete(expired2);
+  }
 }
