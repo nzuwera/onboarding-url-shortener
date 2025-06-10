@@ -10,6 +10,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+// import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.net.URI;
 
@@ -28,6 +37,7 @@ import java.net.URI;
 @RestController
 @RequestMapping
 @Slf4j
+@Tag(name = "URL Shortener API", description = "Operations related to URL shortening")
 public class UrlShortenerController {
 
     private final UrlShortenerService urlshortenerService;
@@ -49,6 +59,7 @@ public class UrlShortenerController {
      * 
      * @return String welcome message
      */
+    @Operation(summary = "Welcome endpoint", description = "Health check and welcome message for the service.")
     @GetMapping("/")
     public String index() {
         return "Welcome to URL - Shortener Service!";
@@ -72,9 +83,15 @@ public class UrlShortenerController {
      * @throws ConflictException if the custom ID already exists
      * @throws MethodArgumentNotValidException if validation fails on the request
      */
+    @Operation(summary = "Create a shortened URL", description = "Creates a shortened URL from a long URL with optional TTL and custom ID.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Short URL created successfully", content = @Content(schema = @Schema(implementation = ShortenUrlResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Custom ID already exists", content = @Content)
+    })
     @PostMapping("/api/v1/shorten-url")
     public ResponseEntity<CustomResponse<ShortenUrlResponseDto>> shortenUrl(
-            @RequestParam(required = false) Integer ttl,
+            @Parameter(description = "Optional time-to-live in hours for the shortened URL") @RequestParam(required = false) Integer ttl,
             @RequestBody @Valid ShortenUrlRequestDto longUrl) {
 
         // Delegate URL shortening to the service layer
@@ -104,8 +121,14 @@ public class UrlShortenerController {
      * @throws NotFoundException if the ID doesn't exist in the database
      * @throws UrlExpiredException if the URL has expired based on its TTL
      */
+    @Operation(summary = "Redirect to original URL", description = "Redirects to the original URL using the shortened ID.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "302", description = "Redirect to original URL"),
+        @ApiResponse(responseCode = "404", description = "Short URL not found", content = @Content),
+        @ApiResponse(responseCode = "410", description = "Short URL expired", content = @Content)
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<Object> redirectToOriginal(@PathVariable String id) {
+    public ResponseEntity<Object> redirectToOriginal(@Parameter(description = "Shortened URL identifier") @PathVariable String id) {
         // Retrieve the URL entity (includes expiration check)
         ShortenUrl url = urlshortenerService.getShortUrl(id);
 
@@ -129,8 +152,13 @@ public class UrlShortenerController {
      * 
      * @throws NotFoundException if the ID doesn't exist in the database
      */
+    @Operation(summary = "Delete a shortened URL", description = "Deletes a shortened URL by its ID.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Shorten url deleted successfully"),
+        @ApiResponse(responseCode = "404", description = "Short URL not found", content = @Content)
+    })
     @DeleteMapping("/api/v1/shorten-url/{id}")
-    public ResponseEntity<CustomResponse<Void>> deleteShortUrl(@PathVariable String id) {
+    public ResponseEntity<CustomResponse<Void>> deleteShortUrl(@Parameter(description = "Shortened URL identifier to delete") @PathVariable String id) {
         // Delegate deletion to the service layer
         urlshortenerService.deleteShortUrl(id);
         
