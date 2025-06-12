@@ -23,7 +23,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestBody;
 
 /**
  * REST Controller for URL shortening operations.
@@ -35,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * CustomResponse wrapper class.
  */
 @RestController
-@RequestMapping
+@RequestMapping(value = "/api/v1/url-shortener")
 @Slf4j
 @Tag(name = "URL Shortener API", description = "Operations related to URL shortening")
 public class UrlShortenerController {
@@ -94,7 +93,7 @@ public class UrlShortenerController {
     @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content),
     @ApiResponse(responseCode = "409", description = "Custom ID already exists", content = @Content)
   })
-  @PostMapping("/api/v1/shorten-url")
+  @PostMapping("/")
   public ResponseEntity<CustomResponse<ShortenUrlResponseDto>> shortenUrl(
       @Parameter(description = "Optional time-to-live in hours for the shortened URL")
           @RequestParam(required = false)
@@ -165,7 +164,7 @@ public class UrlShortenerController {
     @ApiResponse(responseCode = "200", description = "Shorten url deleted successfully"),
     @ApiResponse(responseCode = "404", description = "Short URL not found", content = @Content)
   })
-  @DeleteMapping("/api/v1/shorten-url/{id}")
+  @DeleteMapping("/{id}")
   public ResponseEntity<CustomResponse<Void>> deleteShortUrl(
       @Parameter(description = "Shortened URL identifier to delete") @PathVariable String id) {
     // Delegate deletion to the service layer
