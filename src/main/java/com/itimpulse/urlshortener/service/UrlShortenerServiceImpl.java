@@ -46,6 +46,8 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     private final UrlBuilder urlBuilder;
     private final RedisTemplate<String, Object> redisTemplate;
 
+    private static final int DEFAULT_CACHE_TTL_HOURS = 24;
+
     /**
      * Constructor for dependency injection.
      * 
@@ -107,7 +109,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
         if (ttl != null) {
             redisTemplate.opsForValue().set(cacheKey, shortUrl, ttl, TimeUnit.HOURS);
         } else {
-            redisTemplate.opsForValue().set(cacheKey, shortUrl, 24, TimeUnit.HOURS); // Default 24h cache
+            redisTemplate.opsForValue().set(cacheKey, shortUrl, DEFAULT_CACHE_TTL_HOURS, TimeUnit.HOURS);
         }
 
         ShortenUrlResponseDto responseDto = new ShortenUrlResponseDto();
@@ -165,7 +167,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
         }
 
         // Cache the URL
-        redisTemplate.opsForValue().set(cacheKey, url, 1, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(cacheKey, url, DEFAULT_CACHE_TTL_HOURS, TimeUnit.HOURS);
 
         return url;
     }
