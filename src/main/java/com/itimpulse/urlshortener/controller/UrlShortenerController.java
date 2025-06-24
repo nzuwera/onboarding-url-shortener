@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-// import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.extern.slf4j.Slf4j;
@@ -93,7 +92,7 @@ public class UrlShortenerController {
     @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content),
     @ApiResponse(responseCode = "409", description = "Custom ID already exists", content = @Content)
   })
-  @PostMapping("/")
+  @PostMapping
   public ResponseEntity<CustomResponse<ShortenUrlResponseDto>> shortenUrl(
       @Parameter(description = "Optional time-to-live in hours for the shortened URL")
           @RequestParam(required = false)
