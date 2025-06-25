@@ -91,9 +91,8 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
                 ? requestDto.getCustomId()
                 : shortIdGenerator.generate();
 
-        // Check cache first for ID conflicts
         String cacheKey = "url:" + shortId;
-        if (redisTemplate.hasKey(cacheKey) || shortenUrlRepository.existsById(shortId)) {
+        if (shortenUrlRepository.existsById(shortId)) {
             log.warn("Short ID '{}' already exists", shortId);
             throw new ConflictException("The provided ID already exists. Please choose a different ID.");
         }
