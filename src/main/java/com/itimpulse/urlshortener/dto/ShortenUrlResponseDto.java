@@ -23,6 +23,8 @@ public class ShortenUrlResponseDto {
       example = "2024-12-31T23:59:59")
   private LocalDateTime ttl;
 
-  @Schema(description = "The full shortened URL", example = "http://localhost:8080/api/v1/url-shortener/abc123")
+  @Schema(
+      description = "The full shortened URL",
+      example = "http://localhost:8080/api/v1/url-shortener/abc123")
   private String shortenUrl;
 }

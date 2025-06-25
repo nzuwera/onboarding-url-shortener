@@ -13,6 +13,6 @@ public class UrlBuilder {
   }
 
   public String buildShortUrl(String shortId) {
-    return allowedOrigin + "/api/v1/url-shortener/" + shortId;
+    return allowedOrigin + "/" + shortId;
   }
 }

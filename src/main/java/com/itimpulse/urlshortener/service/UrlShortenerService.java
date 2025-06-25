@@ -2,7 +2,6 @@ package com.itimpulse.urlshortener.service;
 
 import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
-import com.itimpulse.urlshortener.exceptions.BadRequestException;
 import com.itimpulse.urlshortener.exceptions.ConflictException;
 import com.itimpulse.urlshortener.exceptions.NotFoundException;
 import com.itimpulse.urlshortener.exceptions.UrlExpiredException;
@@ -12,12 +11,12 @@ import com.itimpulse.urlshortener.util.ShortIdGenerator;
 import com.itimpulse.urlshortener.util.UrlBuilder;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -35,9 +34,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @RequiredArgsConstructor
 public class UrlShortenerService implements IUrlShortenerService {
+
   private final ShortIdGenerator shortIdGenerator;
   private final ShortenUrlRepository shortenUrlRepository;
   private final UrlBuilder urlBuilder;
+  private final RedisTemplate<String, Object> redisTemplate;
+
+  private static final int DEFAULT_CACHE_TTL_HOURS = 24;
 
   /**
    * Constructor for dependency injection.
@@ -45,15 +48,18 @@ public class UrlShortenerService implements IUrlShortenerService {
    * @param shortenUrlRepository Repository for database operations
    * @param shortIdGenerator Utility for generating random IDs
    * @param urlBuilder Utility for building complete shortened URLs
+   * @param redisTemplate Redis template for caching operations
    */
   @Autowired
   public UrlShortenerService(
       ShortenUrlRepository shortenUrlRepository,
       ShortIdGenerator shortIdGenerator,
-      UrlBuilder urlBuilder) {
+      UrlBuilder urlBuilder,
+      RedisTemplate<String, Object> redisTemplate) {
     this.shortenUrlRepository = shortenUrlRepository;
     this.shortIdGenerator = shortIdGenerator;
     this.urlBuilder = urlBuilder;
+    this.redisTemplate = redisTemplate;
   }
 
   /**
@@ -78,13 +84,10 @@ public class UrlShortenerService implements IUrlShortenerService {
             ? requestDto.getCustomId()
             : shortIdGenerator.generate();
 
+    String cacheKey = "url:" + shortId;
     if (shortenUrlRepository.existsById(shortId)) {
       log.warn("Short ID '{}' already exists", shortId);
       throw new ConflictException("The provided ID already exists. Please choose a different ID.");
-    }
-
-    if (!validateCustomId(shortId)) {
-      throw new BadRequestException("Invalid custom id");
     }
 
     ShortenUrl shortUrl = new ShortenUrl();
@@ -94,6 +97,13 @@ public class UrlShortenerService implements IUrlShortenerService {
 
     shortenUrlRepository.save(shortUrl);
 
+    // Cache the URL with appropriate TTL
+    if (ttl != null) {
+      redisTemplate.opsForValue().set(cacheKey, shortUrl, ttl, TimeUnit.HOURS);
+    } else {
+      redisTemplate.opsForValue().set(cacheKey, shortUrl, DEFAULT_CACHE_TTL_HOURS, TimeUnit.HOURS);
+    }
+
     ShortenUrlResponseDto responseDto = new ShortenUrlResponseDto();
     BeanUtils.copyProperties(shortUrl, responseDto);
     responseDto.setShortenUrl(urlBuilder.buildShortUrl(shortId));
@@ -101,13 +111,6 @@ public class UrlShortenerService implements IUrlShortenerService {
     log.info("Created short URL: {}", responseDto.getShortenUrl());
 
     return responseDto;
-  }
-
-  private boolean validateCustomId(String customId) {
-
-    Pattern validator = Pattern.compile(".*[a-zA-Z0-9]{6}.*");
-
-    return validator.matcher(customId).matches();
   }
 
   /**
@@ -127,7 +130,24 @@ public class UrlShortenerService implements IUrlShortenerService {
    */
   @Override
   public ShortenUrl getShortUrl(String id) {
+    String cacheKey = "url:" + id;
 
+    // Try to get from cache first
+    ShortenUrl cachedUrl = (ShortenUrl) redisTemplate.opsForValue().get(cacheKey);
+    if (cachedUrl != null) {
+      // Check expiration
+      if (cachedUrl.getTtl() != null && cachedUrl.getTtl().isBefore(LocalDateTime.now())) {
+        // Remove expired URL from cache
+        redisTemplate.delete(cacheKey);
+        log.warn("Short URL '{}' expired", id);
+        throw new UrlExpiredException(
+            "The requested short URL has expired and is no longer accessible.");
+      }
+
+      return cachedUrl;
+    }
+
+    // Cache miss - get from database
     ShortenUrl url =
         shortenUrlRepository
             .findById(id)
@@ -139,6 +159,9 @@ public class UrlShortenerService implements IUrlShortenerService {
       throw new UrlExpiredException(
           "The requested short URL has expired and is no longer accessible.");
     }
+
+    // Cache the URL
+    redisTemplate.opsForValue().set(cacheKey, url, DEFAULT_CACHE_TTL_HOURS, TimeUnit.HOURS);
 
     return url;
   }
@@ -156,18 +179,15 @@ public class UrlShortenerService implements IUrlShortenerService {
    */
   @Override
   public void deleteShortUrl(String id) {
+    shortenUrlRepository
+        .findById(id)
+        .orElseThrow(() -> new NotFoundException("The provided ID could not be found."));
 
-    Optional<ShortenUrl> shortUrl = shortenUrlRepository.findById(id);
+    shortenUrlRepository.deleteById(id);
 
-    if (shortUrl.isPresent()) {
-      shortUrl.ifPresent(
-          url -> {
-            shortenUrlRepository.deleteById(url.getId());
-            log.info("Deleted short URL with ID: {}", id);
-          });
-    } else {
-      throw new NotFoundException("The provided ID could not be found.");
-    }
+    // Remove from cache
+    redisTemplate.delete("url:" + id);
+    log.info("Deleted short URL with ID: {}", id);
   }
 
   /**
@@ -191,6 +211,7 @@ public class UrlShortenerService implements IUrlShortenerService {
 
     for (ShortenUrl url : expiredUrls) {
       shortenUrlRepository.delete(url);
+      redisTemplate.delete("url:" + url.getId());
       log.info("Deleted expired URL with ID: {}", url.getId());
     }
   }

@@ -6,7 +6,7 @@ RUN gradle build --no-daemon || return 0
 
 
 COPY . .
-RUN gradle clean build -x test --no-daemon
+RUN gradle spotlessApply && gradle clean build -x test --no-daemon
 
 FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
