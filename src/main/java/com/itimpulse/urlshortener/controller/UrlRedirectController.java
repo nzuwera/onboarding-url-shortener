@@ -38,6 +38,22 @@ public class UrlRedirectController {
   }
 
   /**
+   * Welcome endpoint that returns a greeting message.
+   *
+   * <p>This endpoint serves as a health check and welcome message for the service. It can be used
+   * to verify that the application is running properly.
+   *
+   * @return String welcome message
+   */
+  @Operation(
+      summary = "Welcome endpoint",
+      description = "Health check and welcome message for the service.")
+  @GetMapping
+  public String index() {
+    return "Welcome to URL - Shortener Service!";
+  }
+
+  /**
    * Redirects to the original URL using the shortened ID.
    *
    * <p>This endpoint handles the core functionality of URL redirection. When a user visits a

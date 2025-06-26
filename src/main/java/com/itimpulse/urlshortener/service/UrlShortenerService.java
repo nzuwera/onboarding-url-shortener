@@ -2,6 +2,7 @@ package com.itimpulse.urlshortener.service;
 
 import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
+import com.itimpulse.urlshortener.exceptions.BadRequestException;
 import com.itimpulse.urlshortener.exceptions.ConflictException;
 import com.itimpulse.urlshortener.exceptions.NotFoundException;
 import com.itimpulse.urlshortener.exceptions.UrlExpiredException;
@@ -12,6 +13,7 @@ import com.itimpulse.urlshortener.util.UrlBuilder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -85,9 +87,14 @@ public class UrlShortenerService implements IUrlShortenerService {
             : shortIdGenerator.generate();
 
     String cacheKey = "url:" + shortId;
+
     if (shortenUrlRepository.existsById(shortId)) {
       log.warn("Short ID '{}' already exists", shortId);
       throw new ConflictException("The provided ID already exists. Please choose a different ID.");
+    }
+
+    if (!validateCustomId(shortId)) {
+      throw new BadRequestException("Invalid custom id");
     }
 
     ShortenUrl shortUrl = new ShortenUrl();
@@ -111,6 +118,13 @@ public class UrlShortenerService implements IUrlShortenerService {
     log.info("Created short URL: {}", responseDto.getShortenUrl());
 
     return responseDto;
+  }
+
+  private boolean validateCustomId(String customId) {
+
+    Pattern validator = Pattern.compile(".*[a-zA-Z0-9]{6}.*");
+
+    return validator.matcher(customId).matches();
   }
 
   /**

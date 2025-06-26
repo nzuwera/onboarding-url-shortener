@@ -47,22 +47,6 @@ public class UrlShortenerController {
   }
 
   /**
-   * Welcome endpoint that returns a greeting message.
-   *
-   * <p>This endpoint serves as a health check and welcome message for the service. It can be used
-   * to verify that the application is running properly.
-   *
-   * @return String welcome message
-   */
-  @Operation(
-      summary = "Welcome endpoint",
-      description = "Health check and welcome message for the service.")
-  @GetMapping("/")
-  public String index() {
-    return "Welcome to URL - Shortener Service!";
-  }
-
-  /**
    * Creates a shortened URL from a long URL.
    *
    * <p>This endpoint accepts a long URL and optional parameters to create a shortened version. The

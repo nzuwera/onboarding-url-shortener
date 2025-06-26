@@ -22,6 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 @ExtendWith(MockitoExtension.class)
 class UrlShortenerServiceTest {
@@ -32,6 +34,10 @@ class UrlShortenerServiceTest {
 
   @Mock private UrlBuilder urlBuilder;
 
+  @Mock private RedisTemplate<String, Object> redisTemplate;
+
+  @Mock private ValueOperations<String, Object> valueOperations;
+
   @InjectMocks private UrlShortenerService urlShortenerService;
 
   @Test
@@ -39,6 +45,7 @@ class UrlShortenerServiceTest {
     ShortenUrlRequestDto request = new ShortenUrlRequestDto();
     request.setLongUrl("https://example.com");
 
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(shortIdGenerator.generate()).thenReturn("abc123");
     when(shortenUrlRepository.existsById("abc123")).thenReturn(false);
     when(urlBuilder.buildShortUrl("abc123")).thenReturn("http://short.ly/abc123");
@@ -59,6 +66,7 @@ class UrlShortenerServiceTest {
     request.setLongUrl("https://example.com");
     request.setCustomId("myCustomId");
 
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(shortenUrlRepository.existsById("myCustomId")).thenReturn(false);
     when(urlBuilder.buildShortUrl("myCustomId")).thenReturn("http://short.ly/myCustomId");
 
@@ -113,6 +121,7 @@ class UrlShortenerServiceTest {
     url.setId("expired123");
     url.setTtl(LocalDateTime.now().minusHours(1));
 
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(shortenUrlRepository.findById("expired123")).thenReturn(Optional.of(url));
 
     assertThrows(
@@ -129,6 +138,7 @@ class UrlShortenerServiceTest {
     url.setUrl("https://example.com");
     url.setTtl(LocalDateTime.now().plusHours(1)); // Not expired
 
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(shortenUrlRepository.findById("abc123")).thenReturn(Optional.of(url));
 
     ShortenUrl result = urlShortenerService.getShortUrl("abc123");
@@ -138,6 +148,8 @@ class UrlShortenerServiceTest {
 
   @Test
   void testGetShortUrlNotFound() {
+
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(shortenUrlRepository.findById("unknown")).thenReturn(Optional.empty());
 
     NotFoundException exception =
