@@ -106,7 +106,6 @@ public class UrlShortenerController {
                 "Short URL created successfully", HttpStatus.CREATED.value(), shortUrl));
   }
 
-
   /**
    * Deletes a shortened URL by its ID.
    *
