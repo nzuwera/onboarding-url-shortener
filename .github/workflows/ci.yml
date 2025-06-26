@@ -13,6 +13,8 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+      SERVER_PORT: 8080
 
     steps:
       - name: Checkout repository
@@ -36,8 +38,8 @@ jobs:
       - name: Lint code with Spotless
         run: ./gradlew spotlessCheck
 
-      - name: Run unit tests
-        run: ./gradlew test
+      - name: Run tests with debug info
+        run: ./gradlew test --stacktrace --info
 
       - name: Generate coverage report
         run: ./gradlew jacocoTestReport

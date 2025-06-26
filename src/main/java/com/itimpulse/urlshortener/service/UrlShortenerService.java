@@ -52,7 +52,6 @@ public class UrlShortenerService implements IUrlShortenerService {
    * @param urlBuilder Utility for building complete shortened URLs
    * @param redisTemplate Redis template for caching operations
    */
-  @Autowired
   public UrlShortenerService(
       ShortenUrlRepository shortenUrlRepository,
       ShortIdGenerator shortIdGenerator,

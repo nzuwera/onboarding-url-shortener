@@ -14,8 +14,10 @@ import com.itimpulse.urlshortener.exceptions.ConflictException;
 import com.itimpulse.urlshortener.service.UrlShortenerService;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,6 +32,8 @@ class UrlShortenerControllerTest {
   @MockitoBean private UrlShortenerService urlShortenerService;
 
   @Autowired private ObjectMapper objectMapper;
+
+  @Mock private RedisTemplate<String, Object> redisTemplate;
 
   @Test
   void testCreateShortenUrl() throws Exception {
