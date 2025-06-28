@@ -1,0 +1,24 @@
+# OS / IDE
+*.iml
+*.log
+*.swp
+.DS_Store
+.idea/
+.vscode/
+
+# Git
+.git
+.gitignore
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Maven (if ever used)
+target/
+
+
+# Env files and secrets
+.env
+.env.local

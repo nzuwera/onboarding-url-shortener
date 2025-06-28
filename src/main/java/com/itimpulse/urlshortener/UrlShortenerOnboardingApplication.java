@@ -8,8 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class UrlShortenerOnboardingApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(UrlShortenerOnboardingApplication.class, args);
-    }
-
+  public static void main(String[] args) {
+    SpringApplication.run(UrlShortenerOnboardingApplication.class, args);
+  }
 }
