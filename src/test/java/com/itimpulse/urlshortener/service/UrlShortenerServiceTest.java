@@ -17,11 +17,14 @@ import com.itimpulse.urlshortener.util.UrlBuilder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 @ExtendWith(MockitoExtension.class)
 class UrlShortenerServiceTest {
@@ -31,6 +34,10 @@ class UrlShortenerServiceTest {
   @Mock private ShortIdGenerator shortIdGenerator;
 
   @Mock private UrlBuilder urlBuilder;
+
+  @Mock private RedisTemplate<String, Object> redisTemplate;
+
+  @Mock private ValueOperations<String, Object> valueOperations;
 
   @InjectMocks private UrlShortenerService urlShortenerService;
 
@@ -42,6 +49,7 @@ class UrlShortenerServiceTest {
     when(shortIdGenerator.generate()).thenReturn("abc123");
     when(shortenUrlRepository.existsById("abc123")).thenReturn(false);
     when(urlBuilder.buildShortUrl("abc123")).thenReturn("http://short.ly/abc123");
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
     ShortenUrlResponseDto result = urlShortenerService.createShortUrl(request, 1);
 
@@ -50,6 +58,7 @@ class UrlShortenerServiceTest {
     assertEquals("http://short.ly/abc123", result.getShortenUrl());
 
     verify(shortenUrlRepository).save(any(ShortenUrl.class));
+    verify(valueOperations).set(eq("url:abc123"), any(ShortenUrl.class), eq(1L), eq(TimeUnit.HOURS));
   }
 
   @Test
@@ -61,6 +70,7 @@ class UrlShortenerServiceTest {
 
     when(shortenUrlRepository.existsById("myCustomId")).thenReturn(false);
     when(urlBuilder.buildShortUrl("myCustomId")).thenReturn("http://short.ly/myCustomId");
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
     ShortenUrlResponseDto result = urlShortenerService.createShortUrl(request, 2);
 
@@ -70,6 +80,7 @@ class UrlShortenerServiceTest {
 
     verify(shortIdGenerator, never()).generate();
     verify(shortenUrlRepository).save(any(ShortenUrl.class));
+    verify(valueOperations).set(eq("url:myCustomId"), any(ShortenUrl.class), eq(2L), eq(TimeUnit.HOURS));
   }
 
   @Test
@@ -77,8 +88,6 @@ class UrlShortenerServiceTest {
     ShortenUrlRequestDto request = new ShortenUrlRequestDto();
     request.setLongUrl("https://example.com");
     request.setCustomId("!@#");
-
-    when(shortenUrlRepository.existsById("!@#")).thenReturn(false);
 
     BadRequestException exception =
         assertThrows(
@@ -113,6 +122,8 @@ class UrlShortenerServiceTest {
     url.setId("expired123");
     url.setTtl(LocalDateTime.now().minusHours(1));
 
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.get("url:expired123")).thenReturn(null);
     when(shortenUrlRepository.findById("expired123")).thenReturn(Optional.of(url));
 
     assertThrows(
@@ -129,15 +140,20 @@ class UrlShortenerServiceTest {
     url.setUrl("https://example.com");
     url.setTtl(LocalDateTime.now().plusHours(1)); // Not expired
 
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.get("url:abc123")).thenReturn(null);
     when(shortenUrlRepository.findById("abc123")).thenReturn(Optional.of(url));
 
     ShortenUrl result = urlShortenerService.getShortUrl("abc123");
 
     assertEquals("https://example.com", result.getUrl());
+    verify(valueOperations).set(eq("url:abc123"), eq(url), eq(24L), eq(TimeUnit.HOURS));
   }
 
   @Test
   void testGetShortUrlNotFound() {
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.get("url:unknown")).thenReturn(null);
     when(shortenUrlRepository.findById("unknown")).thenReturn(Optional.empty());
 
     NotFoundException exception =
@@ -156,6 +172,7 @@ class UrlShortenerServiceTest {
     urlShortenerService.deleteShortUrl("abc123");
 
     verify(shortenUrlRepository).deleteById("abc123");
+    verify(redisTemplate).delete("url:abc123");
   }
 
   @Test
@@ -186,5 +203,7 @@ class UrlShortenerServiceTest {
 
     verify(shortenUrlRepository).delete(expired1);
     verify(shortenUrlRepository).delete(expired2);
+    verify(redisTemplate).delete("url:id1");
+    verify(redisTemplate).delete("url:id2");
   }
 }

@@ -2,6 +2,7 @@ package com.itimpulse.urlshortener.service;
 
 import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
+import com.itimpulse.urlshortener.exceptions.BadRequestException;
 import com.itimpulse.urlshortener.exceptions.ConflictException;
 import com.itimpulse.urlshortener.exceptions.NotFoundException;
 import com.itimpulse.urlshortener.exceptions.UrlExpiredException;
@@ -15,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -40,26 +40,16 @@ public class UrlShortenerService implements IUrlShortenerService {
   private final UrlBuilder urlBuilder;
   private final RedisTemplate<String, Object> redisTemplate;
 
-  private static final int DEFAULT_CACHE_TTL_HOURS = 24;
+  private static final long DEFAULT_CACHE_TTL_HOURS = 24;
 
   /**
-   * Constructor for dependency injection.
+   * Validates if a custom ID is alphanumeric
    *
-   * @param shortenUrlRepository Repository for database operations
-   * @param shortIdGenerator Utility for generating random IDs
-   * @param urlBuilder Utility for building complete shortened URLs
-   * @param redisTemplate Redis template for caching operations
+   * @param customId The custom ID to validate
+   * @return true if valid, false otherwise
    */
-  @Autowired
-  public UrlShortenerService(
-      ShortenUrlRepository shortenUrlRepository,
-      ShortIdGenerator shortIdGenerator,
-      UrlBuilder urlBuilder,
-      RedisTemplate<String, Object> redisTemplate) {
-    this.shortenUrlRepository = shortenUrlRepository;
-    this.shortIdGenerator = shortIdGenerator;
-    this.urlBuilder = urlBuilder;
-    this.redisTemplate = redisTemplate;
+  private boolean isValidCustomId(String customId) {
+    return customId != null && customId.matches("^[a-zA-Z0-9]+$");
   }
 
   /**
@@ -79,12 +69,17 @@ public class UrlShortenerService implements IUrlShortenerService {
    */
   @Override
   public ShortenUrlResponseDto createShortUrl(ShortenUrlRequestDto requestDto, Integer ttl) {
-    String shortId =
-        (requestDto.getCustomId() != null && !requestDto.getCustomId().isEmpty())
-            ? requestDto.getCustomId()
-            : shortIdGenerator.generate();
+    String shortId;
+    
+    if (requestDto.getCustomId() != null && !requestDto.getCustomId().isEmpty()) {
+      if (!isValidCustomId(requestDto.getCustomId())) {
+        throw new BadRequestException("Invalid custom id");
+      }
+      shortId = requestDto.getCustomId();
+    } else {
+      shortId = shortIdGenerator.generate();
+    }
 
-    String cacheKey = "url:" + shortId;
     if (shortenUrlRepository.existsById(shortId)) {
       log.warn("Short ID '{}' already exists", shortId);
       throw new ConflictException("The provided ID already exists. Please choose a different ID.");
@@ -98,8 +93,9 @@ public class UrlShortenerService implements IUrlShortenerService {
     shortenUrlRepository.save(shortUrl);
 
     // Cache the URL with appropriate TTL
+    String cacheKey = "url:" + shortId;
     if (ttl != null) {
-      redisTemplate.opsForValue().set(cacheKey, shortUrl, ttl, TimeUnit.HOURS);
+      redisTemplate.opsForValue().set(cacheKey, shortUrl, ttl.longValue(), TimeUnit.HOURS);
     } else {
       redisTemplate.opsForValue().set(cacheKey, shortUrl, DEFAULT_CACHE_TTL_HOURS, TimeUnit.HOURS);
     }
