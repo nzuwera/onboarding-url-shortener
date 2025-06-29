@@ -64,13 +64,14 @@ public class UrlRedirectController {
     @GetMapping("/{id}")
     public ResponseEntity<Object> redirectToOriginal(
             @Parameter(description = "Shortened URL identifier") @PathVariable String id) {
-        // Retrieve the URL entity (includes expiration check)
+        // Retrieve the shortened URL entity. The service layer handles the logic
+        // for finding the URL and checking if it has expired.
         ShortenUrl url = urlShortenerService.getShortUrl(id);
 
-        // Log the redirect for monitoring and analytics purposes
+        // Log the redirection for monitoring purposes.
         log.info("Redirecting to: {}", url.getUrl());
 
-        // Perform HTTP 302 redirect to the original URL
+        // Perform an HTTP 302 Found redirect to the original URL.
         return ResponseEntity.status(302).location(URI.create(url.getUrl())).build();
     }
 }

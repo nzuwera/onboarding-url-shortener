@@ -47,11 +47,16 @@ public class ShortIdGenerator {
    */
   public String generate() {
     StringBuilder generatedId = new StringBuilder(SHORT_ID_LENGTH);
+
+    // Ensure at least one letter and one digit are included.
     generatedId.append(LETTERS.charAt(random.nextInt(LETTERS.length())));
     generatedId.append(DIGITS.charAt(random.nextInt(DIGITS.length())));
+
+    // Fill the rest of the ID with random alphanumeric characters.
     for (int i = 2; i < SHORT_ID_LENGTH; i++) {
       generatedId.append(ALPHANUMERIC.charAt(random.nextInt(ALPHANUMERIC.length())));
     }
+    // Shuffle the result to ensure the positions of letter/digit are not predictable.
     return shuffleString(generatedId.toString());
   }
 
@@ -67,8 +72,10 @@ public class ShortIdGenerator {
    */
   private String shuffleString(String input) {
     char[] array = input.toCharArray();
+    // Fisher-Yates shuffle algorithm to randomize the array.
     for (int i = array.length - 1; i > 0; i--) {
       int index = random.nextInt(i + 1);
+      // Swap elements.
       char temp = array[i];
       array[i] = array[index];
       array[index] = temp;
