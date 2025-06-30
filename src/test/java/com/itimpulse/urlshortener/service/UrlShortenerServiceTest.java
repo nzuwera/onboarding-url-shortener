@@ -134,6 +134,27 @@ class UrlShortenerServiceTest {
   }
 
   @Test
+  void testGetShortUrlFromCacheExpired() {
+    ShortenUrl expiredCachedUrl = new ShortenUrl();
+    expiredCachedUrl.setId("cachedExpired123");
+    expiredCachedUrl.setUrl("https://example.com");
+    expiredCachedUrl.setTtl(LocalDateTime.now().minusHours(1));
+
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.get("url:cachedExpired123")).thenReturn(expiredCachedUrl);
+
+    UrlExpiredException exception = assertThrows(
+        UrlExpiredException.class,
+        () -> urlShortenerService.getShortUrl("cachedExpired123")
+    );
+
+    assertEquals("The requested short URL has expired and is no longer accessible.", exception.getMessage());
+    
+    verify(redisTemplate).delete("url:cachedExpired123");
+    verify(shortenUrlRepository, never()).findById("cachedExpired123");
+  }
+
+  @Test
   void testGetShortUrlSuccess() {
     ShortenUrl url = new ShortenUrl();
     url.setId("abc123");
