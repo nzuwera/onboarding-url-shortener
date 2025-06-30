@@ -42,6 +42,7 @@ public class UrlShortenerController {
    *
    * @param urlshortenerService Service layer implementation for URL shortening operations
    */
+  // Injects the URL shortener service to handle business logic.
   public UrlShortenerController(IUrlShortenerService urlshortenerService) {
     this.urlShortenerService = urlshortenerService;
   }
@@ -54,6 +55,7 @@ public class UrlShortenerController {
    *
    * @return String welcome message
    */
+  // Provides a simple health check endpoint.
   @Operation(
       summary = "Welcome endpoint",
       description = "Health check and welcome message for the service.")
@@ -96,10 +98,10 @@ public class UrlShortenerController {
           Integer ttl,
       @RequestBody @Valid ShortenUrlRequestDto longUrl) {
 
-    // Delegate URL shortening to the service layer
+    // Delegate the core logic of URL shortening to the service layer.
     ShortenUrlResponseDto shortUrl = urlShortenerService.createShortUrl(longUrl, ttl);
 
-    // Return success response with HTTP 201 Created status
+    // Wrap the response in a custom structure and return with a 201 Created status.
     return ResponseEntity.status(HttpStatus.CREATED.value())
         .body(
             CustomResponse.successResponse(
@@ -127,10 +129,10 @@ public class UrlShortenerController {
   @DeleteMapping("/{id}")
   public ResponseEntity<CustomResponse<Void>> deleteShortUrl(
       @Parameter(description = "Shortened URL identifier to delete") @PathVariable String id) {
-    // Delegate deletion to the service layer
+    // Delegate the deletion logic to the service layer.
     urlShortenerService.deleteShortUrl(id);
 
-    // Return success response with HTTP 200 OK status
+    // Return a success response with a 200 OK status.
     return ResponseEntity.ok(
         CustomResponse.successResponse("Shorten url deleted successfully", HttpStatus.OK.value()));
   }

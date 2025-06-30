@@ -44,6 +44,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'com.h2database:h2'
+    testImplementation 'org.testcontainers:junit-jupiter:1.21.2'
+    testImplementation 'org.testcontainers:postgresql:1.21.2'
+    testImplementation 'com.redis:testcontainers-redis:2.2.4'
 }
 
 tasks.named('test') {
