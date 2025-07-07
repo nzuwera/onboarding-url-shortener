@@ -2,6 +2,7 @@ package com.itimpulse.urlshortener.service;
 
 import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
+import com.itimpulse.urlshortener.exceptions.BadRequestException;
 import com.itimpulse.urlshortener.exceptions.ConflictException;
 import com.itimpulse.urlshortener.exceptions.NotFoundException;
 import com.itimpulse.urlshortener.exceptions.UrlExpiredException;
@@ -12,10 +13,10 @@ import com.itimpulse.urlshortener.util.UrlBuilder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,6 @@ public class UrlShortenerService implements IUrlShortenerService {
    * @param urlBuilder Utility for building complete shortened URLs
    * @param redisTemplate Redis template for caching operations
    */
-  @Autowired
   public UrlShortenerService(
       ShortenUrlRepository shortenUrlRepository,
       ShortIdGenerator shortIdGenerator,
@@ -85,9 +85,14 @@ public class UrlShortenerService implements IUrlShortenerService {
             : shortIdGenerator.generate();
 
     String cacheKey = "url:" + shortId;
+
     if (shortenUrlRepository.existsById(shortId)) {
       log.warn("Short ID '{}' already exists", shortId);
       throw new ConflictException("The provided ID already exists. Please choose a different ID.");
+    }
+
+    if (!validateCustomId(shortId)) {
+      throw new BadRequestException("Invalid custom id");
     }
 
     ShortenUrl shortUrl = new ShortenUrl();
@@ -111,6 +116,13 @@ public class UrlShortenerService implements IUrlShortenerService {
     log.info("Created short URL: {}", responseDto.getShortenUrl());
 
     return responseDto;
+  }
+
+  private boolean validateCustomId(String customId) {
+
+    Pattern validator = Pattern.compile(".*[a-zA-Z0-9]{6}.*");
+
+    return validator.matcher(customId).matches();
   }
 
   /**

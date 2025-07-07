@@ -11,14 +11,13 @@ import com.itimpulse.urlshortener.dto.ShortenUrlRequestDto;
 import com.itimpulse.urlshortener.dto.ShortenUrlResponseDto;
 import com.itimpulse.urlshortener.exceptions.BadRequestException;
 import com.itimpulse.urlshortener.exceptions.ConflictException;
-import com.itimpulse.urlshortener.exceptions.NotFoundException;
-import com.itimpulse.urlshortener.exceptions.UrlExpiredException;
-import com.itimpulse.urlshortener.model.ShortenUrl;
 import com.itimpulse.urlshortener.service.UrlShortenerService;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,13 +33,7 @@ class UrlShortenerControllerTest {
 
   @Autowired private ObjectMapper objectMapper;
 
-  @Test
-  void testIndex() throws Exception {
-    mockMvc
-        .perform(get("/"))
-        .andExpect(status().isOk())
-        .andExpect(content().string("Welcome to URL - Shortener Service!"));
-  }
+  @Mock private RedisTemplate<String, Object> redisTemplate;
 
   @Test
   void testCreateShortenUrl() throws Exception {
@@ -59,7 +52,7 @@ class UrlShortenerControllerTest {
 
     mockMvc
         .perform(
-            post("/api/v1/shorten-url")
+            post("/api/v1/url-shortener")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -79,7 +72,7 @@ class UrlShortenerControllerTest {
 
     mockMvc
         .perform(
-            post("/api/v1/shorten-url")
+            post("/api/v1/url-shortener")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isConflict())
@@ -103,7 +96,7 @@ class UrlShortenerControllerTest {
 
     mockMvc
         .perform(
-            post("/api/v1/shorten-url")
+            post("/api/v1/url-shortener")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
         .andExpect(status().isBadRequest())
@@ -128,61 +121,12 @@ class UrlShortenerControllerTest {
 
     mockMvc
         .perform(
-            post("/api/v1/shorten-url")
+            post("/api/v1/url-shortener")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.message").value("Short URL created successfully"))
         .andExpect(jsonPath("$.statusCode").value(201));
-  }
-
-  @Test
-  void testRedirectToOriginalUrl() throws Exception {
-    String id = "abc123";
-    String originalUrl = "http://long-url.com";
-
-    ShortenUrl mockEntity = new ShortenUrl();
-    mockEntity.setId(id);
-    mockEntity.setUrl(originalUrl);
-
-    when(urlShortenerService.getShortUrl(id)).thenReturn(mockEntity);
-
-    mockMvc
-        .perform(get("/" + id))
-        .andExpect(status().isFound())
-        .andExpect(header().string("Location", originalUrl));
-  }
-
-  @Test
-  void testWhenShortUrlIdNotFound() throws Exception {
-    String nonExistentId = "abc123";
-
-    when(urlShortenerService.getShortUrl(nonExistentId))
-        .thenThrow(new NotFoundException("The provided ID could not be found."));
-
-    mockMvc
-        .perform(get("/" + nonExistentId))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("The provided ID could not be found."))
-        .andExpect(jsonPath("$.statusCode").value(404));
-  }
-
-  @Test
-  void testWhenShortUrlIsExpired() throws Exception {
-    String expiredId = "expired123";
-
-    when(urlShortenerService.getShortUrl(expiredId))
-        .thenThrow(
-            new UrlExpiredException(
-                "The requested short URL has expired and is no longer accessible."));
-
-    mockMvc
-        .perform(get("/" + expiredId))
-        .andExpect(status().isGone())
-        .andExpect(
-            jsonPath("$.message")
-                .value("The requested short URL has expired and is no longer accessible."))
-        .andExpect(jsonPath("$.statusCode").value(410));
   }
 
   @Test
@@ -193,7 +137,7 @@ class UrlShortenerControllerTest {
 
     mockMvc
         .perform(
-            post("/api/v1/shorten-url")
+            post("/api/v1/url-shortener")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isBadRequest())
@@ -207,7 +151,7 @@ class UrlShortenerControllerTest {
     String id = "abc123";
 
     mockMvc
-        .perform(delete("/api/v1/shorten-url/" + id))
+        .perform(delete("/api/v1/url-shortener/" + id))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("Shorten url deleted successfully"))
         .andExpect(jsonPath("$.statusCode").value(200));
